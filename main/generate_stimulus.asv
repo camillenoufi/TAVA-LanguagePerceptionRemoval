@@ -119,7 +119,7 @@ function g_vt = ApplyAverageLPCTransferFunction(s, g, fs, fs_original, lpc_param
         n = n+1; %increment frame number
     end
     H = H/(n-1); %avg
-    [avgIR,avgTF] = MinPhaseFIR(fs,F,H,256); %create minimum-phase filter, right now a 1024pt filter before upsampling
+    [avgIR,avgTF] = MinPhaseFIR(fs,F,H); %create minimum-phase filter, right now a 1024pt filter before upsampling
 
     %resample in the time domain to EGG's original sampling rate
     avgIR_resampled = interp(avgIR,fs_original/fs);
@@ -131,30 +131,32 @@ function g_vt = ApplyAverageLPCTransferFunction(s, g, fs, fs_original, lpc_param
 end
 
 % minimum phase FIR filter given amplitudes and frequencies
-function [IR,mag_fullspectrum] = MinPhaseFIR(fs, fc, A, taps)
+function [IR,mag_fullspectrum] = MinPhaseFIR(fs, fc, A)
 
-    fir.freq_vec = fc;
-    fir.magnitude = A;
+fir.freqVect = fc;
+fir.magnitude = A;
 
-    filter_len = 2^(nextpow2(fs/2)); %filter length must be an even number
+filter_len = 2^(nextpow2(fs/2)); %filter length must be an even number
 
-    freq_vec = fs*(0:filter_len-1)./filter_len;
+freq_vec = fs*(0:filter_len-1)./filter_len;
 
-    mag_resampled = interp1(fir.freq_vec, fir.magnitude, freq_vec(1:(filter_len/2)+1)); %interpolate between fc samples through nyquist
-    %replace nans if they exist
-    mag_resampled = smooth(fillmissing(mag_resampled,'linear','SamplePoints',freq_vec(1:length(mag_resampled))),'moving');
-    nyquist_upper_half = flipud(mag_resampled);
+mag_resampled = interp1(fir.freqVect, fir.magnitude, freq_vec(1:(filter_len/2)+1)); %interpolate between fc samples through nyquist
+%replace nans if they exist
+mag_resampled = smooth(fillmissing(mag_resampled,'linear','SamplePoints',freq_vec(1:length(mag_resampled))),'moving');
+nyquist_upper_half = flipud(mag_resampled);
 
-    mag_fullspectrum = [mag_resampled(1:filter_len/2); nyquist_upper_half(1:filter_len/2)];
-    mag_fullspectrum = mag_fullspectrum + 1e-6; %add eps to prevent log(0) next line
+mag_fullspectrum = [mag_resampled(1:filter_len/2); nyquist_upper_half(1:filter_len/2)];
+mag_fullspectrum = mag_fullspectrum + 1e-6;
 
-    % calculate phase through hilbert transform
-    phase = imag(-hilbert(log(mag_fullspectrum)));
-    complex_spectrum = mag_fullspectrum.*exp(1i*phase);
-    IR = real(ifft(complex_spectrum));
+% calculate phase through hilbert transform
+X = -hilbert(log(mag_fullspectrum));
+phase = imag(X);
+complexSpec = mag_fullspectrum.*exp(1i*phase);
+IR = real(ifft(complexSpec));
 
-    % not normalized
-    IR = IR(1:taps);
+%IR = IR./max(abs(IR));
+IR = IR(1:256);
+
 end
 
 % amplitude modulation through STFT cross-filtering of total energy across
@@ -193,17 +195,17 @@ end
 %multichannel output wav file
 function sigs = EqualizeLengths(sigs)
    
-    lens = zeros(length(sigs),1);
-    for k = 1:length(sigs)
-        lens(k) = min(length(sigs{k}));
-    end
-    minlen = min(lens);
+lens = zeros(length(sigs),1);
+for k = 1:length(sigs)
+    lens(k) = min(length(sigs{k}));
+end
+minlen = min(lens);
 
-    for k = 1:length(sigs)
-        if length(sigs{k}) > minlen
-            tmp = sigs{k};
-            sigs{k} = tmp(1:minlen);
-        end
+for k = 1:length(sigs)
+    if length(sigs{k}) > minlen
+        tmp = sigs{k};
+        sigs{k} = tmp(1:minlen);
     end
+end
 
 end
