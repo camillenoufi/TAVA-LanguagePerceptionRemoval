@@ -3,3 +3,9 @@ generate_stimulus_batch.m
 
 # data
 test_audio/
+
+# mac
+.DS_Store
+
+# suffixes
+*.asv

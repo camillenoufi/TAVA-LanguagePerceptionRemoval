@@ -16,6 +16,10 @@ addpath ('./helpers')
 addpath('./../voicebox');
 addpath('./../GFM-IAIF-master');
 
+% FLAGS TO GENERATE BASELINE COMPARISONS:
+lpf_flag = 1;
+lpc_source = 1;
+
 % define STFT processing params
 fs_lpc = 16e3; % fs<=16khz needed for accurate LPC
 % AM params
@@ -23,7 +27,7 @@ wlen = 512;
 hop = wlen/8;
 
 % initialize LPC / filter params
-lpc_params.p = 2 + fs_lpc/1e3; %LPC order
+lpc_params.p = 2 + fs_lpc/2/1e3; %LPC order
 lpc_params.p_glot = 3;
 
 %% Main Wrapper:
@@ -115,7 +119,11 @@ function g_vt = ApplyAverageLPCTransferFunction(s, g, fs, fs_original, lpc_param
         sn = (winGainCOLA*win).*sVoiced(ndx); %get windowed speech sample
         [Av_n,~,~] = gfmiaif(sn,p,p_glot, 0.99, win); %get LPC coeffs for vt, gs, and lr
         [Hn,F] = freqz(1,Av_n,wlen,fs); %get freq-resp amplitudes and f-locations based on LPC coefficients
-        H = H + abs(Hn); %add to sum
+        if isnan(Hn)
+            continue %pass disp(n); disp('NaN calculated') %disp(j+1); disp(j+M)
+        else
+            H = H + abs(Hn); %add to sum
+        end
         n = n+1; %increment frame number
     end
     H = H/(n-1); %avg
@@ -125,6 +133,11 @@ function g_vt = ApplyAverageLPCTransferFunction(s, g, fs, fs_original, lpc_param
     avgIR_resampled = interp(avgIR,fs_original/fs);
     avgIR_resampled = NormalizePeak(avgIR_resampled); %max filter amplitude at 1
 
+%     % BASELINE:
+%     if lpc_source
+%         
+%     end
+        
     % %convolve filter with EGG signal at original sampling rate
     g_vt = conv(g,avgIR_resampled,'same');
 
