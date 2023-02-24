@@ -1,3 +1,5 @@
+Code for the method described in our 2023 ICASSP paper: https://ccrma.stanford.edu/~cnoufi/demos/TAVA-PhonemeRemoval/
+
 # TAVA-LanguagePerceptionRemoval
 
 ### How to use:
