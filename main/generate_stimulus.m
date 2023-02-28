@@ -6,9 +6,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % interface function, run from matlab command line
-function [input_path, output_path]  = generate_stimulus(input_path)
-[path,name,ext] = fileparts(input_path);
-output_path = fullfile(path, [name,'-music',ext]);
+function [input_path, output_path]  = generate_stimulus(input_path, output_dir)
+[~,name,ext] = fileparts(input_path);
+output_path = fullfile(output_dir, [name,ext]);
 
 % Import external scripts & helper functions.  
 % change this if directory structure changes
@@ -16,9 +16,9 @@ addpath ('./helpers')
 addpath('./../voicebox');
 addpath('./../GFM-IAIF-master');
 
-% FLAGS TO GENERATE BASELINE COMPARISONS:
-lpf_flag = 1;
-lpc_source = 1;
+% % FLAGS TO GENERATE BASELINE COMPARISONS:
+% lpf_flag = 1;
+% lpc_source = 1;
 
 % define STFT processing params
 fs_lpc = 16e3; % fs<=16khz needed for accurate LPC
@@ -34,7 +34,7 @@ lpc_params.p_glot = 3;
 % Perform analysis of speech and synthesized of paired "music" stimuli 
 
 % ~~~~~~~~~~~~~~~~~ get EGG & speech mono signal ~~~~~~~~~~~~~~~~~~~~~~~~~
-[signal, fs, y_name] = LoadSpeechSignal(input_path);
+[signal, fs, ~] = LoadSpeechSignal(input_path);
 g = NormalizeLoudness(signal(:,1),fs); %EGG
 s = NormalizeLoudness(signal(:,2),fs); %Speech
 
@@ -51,9 +51,9 @@ g_am(isnan(g_am)) = 0; %set NaNs to 0;
 g_am = NormalizeLoudness(g_am',fs);
 
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ save ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-sigs = {g(:), s(:), g_am(:)}; 
+sigs = {s(:), g_am(:)}; 
 sigs = EqualizeLengths(sigs); %trim to be same length for multichannel comparison
-audiowrite(output_path, sigs{3}, fs);
+audiowrite(output_path, cell2mat(sigs), fs);
 end
 
 %% Helper Functions
@@ -218,5 +218,4 @@ function sigs = EqualizeLengths(sigs)
             sigs{k} = tmp(1:minlen);
         end
     end
-
 end
